@@ -17,6 +17,7 @@ export default class App extends React.Component {
     };
 
     start = () => {
+        if (0 === this.state.a && 0 === this.state.b) return;
         const secsPerMin = 60;
         this.setState({length: this.state.a});
         this.setState({breaks: this.state.b});
