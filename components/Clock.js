@@ -3,66 +3,93 @@ import {
     Text,
     TextInput,
     View,
-    TouchableOpacity
+    TouchableOpacity,
+    StyleSheet
 } from "react-native";
 
 export default class App extends React.Component {
     state = {
-        a: 0,
-        b: 0,
         length: 0,
         breaks: 0,
         fight: true,
-        remaining: 0
+        remaining: 0,
+        running: false
     };
 
-    start = () => {
-        if (0 === this.state.a && 0 === this.state.b) return;
-        const secsPerMin = 60;
-        this.setState({length: this.state.a});
-        this.setState({breaks: this.state.b});
-        this.setState({remaining: this.state.length * secsPerMin});
-        if (this.interval) clearInterval(this.interval);
-        this.interval = setInterval(() => {
-            this.setState({remaining: this.state.remaining - 1});
-            if (-1 === this.state.remaining) {
-                this.bell.play((success) => {
+    ring = () => {
+        if (this.bell) {
+            const that = this;
+            this.bell.stop(() => {
+                that.bell.play((success) => {
                     if (!success) {
                         console.log('playback failed due to audio decoding errors');
                     } 
-                })
-                this.setState({fight: !this.state.fight});
-                this.setState({remaining: this.state.fight ? this.state.length * secsPerMin : this.state.breaks * secsPerMin});
-            }
-        }, 1000);
+                });
+            });
+        }
+    }
+
+    toggle = () => {
+        if ((!this.state.length || 0 == this.state.length)
+         && (!this.state.breaks || 0 == this.state.breaks)) return;
+        if (this.state.running) clearInterval(this.interval);
+        else {
+            const secsPerMin = 60;
+            this.setState({ remaining: this.state.length * secsPerMin });
+            this.ring();
+            if (this.interval) clearInterval(this.interval);
+            const that = this;
+            this.interval = setInterval(() => {
+                that.setState({ remaining: that.state.remaining - 1 });
+                if (-1 === that.state.remaining) {
+                    that.ring();
+                    that.setState({ fight: !that.state.fight });
+                    that.setState({ remaining: that.state.fight ? that.state.length * secsPerMin : that.state.breaks * secsPerMin });
+                }
+            }, 1000);
+        }
+        this.setState({running: !this.state.running});
     };
+
+    getSecs = () => {
+        let secs = this.state.remaining % 60;
+        if (secs < 10) return '0' + secs
+        return secs;
+    }
 
     render() {
         return (
-            <View>
+            <View style={styles.container}>
+                <Text style={styles.title}>Boxing Clock</Text>
+
                 <TextInput
                     keyboardType="numeric"
                     placeholder="Round Length"
-                    onChangeText={a => {
-                        this.setState({a: a});
+                    onChangeText={length => {
+                        this.setState({length: length});
                     }}
+                    style={styles.input}
+                    editable={!this.state.running}
                 />
 
                 <TextInput
                     keyboardType="numeric"
                     placeholder="Break Length"
-                    onChangeText={b => {
-                        this.setState({b: b});
+                    onChangeText={breaks => {
+                        this.setState({breaks: breaks});
                     }}
+                    style={styles.input}
+                    editable={!this.state.running}
                 />
 
                 <TouchableOpacity
-                    onPress={this.start}
+                    onPress={this.toggle}
+                    style={styles.button}
                 >
-                    <Text>Start</Text>
+                    <Text>{this.state.running ? 'Stop' : 'Start'}</Text>
                 </TouchableOpacity>
 
-                <Text>{Math.floor(this.state.remaining / 60)}:{this.state.remaining % 60}</Text>
+                <Text style={styles.clock}>{Math.floor(this.state.remaining / 60)}:{this.getSecs()}</Text>
             </View>
         );
     }
@@ -76,3 +103,26 @@ export default class App extends React.Component {
         })
     }
 }
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    button: {
+        alignItems: 'center',
+        backgroundColor: '#DDDDDD',
+        padding: 10,
+    },   
+    title: {
+      fontSize: 36,
+      color: 'red',
+    },
+    input: {
+        textAlign: 'center',
+    },
+    clock: {
+        fontSize: 28
+    },
+});
